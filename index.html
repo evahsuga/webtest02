@@ -190,6 +190,72 @@
             -webkit-box-orient: vertical;
         }
 
+        .heading-item {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .heading-item:hover {
+            border-color: #3498db;
+            background: #e8f4f8;
+        }
+
+        .heading-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .heading-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .heading-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        .heading-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            padding: 5px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .delete-heading {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-heading:hover {
+            background: #c0392b;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -252,7 +318,20 @@
                         左側のフォームに入力して「構成を提案してもらう」ボタンを押してください
                     </p>
                 </div>
+                <button onclick="showHeadingEditor()" id="editHeadingsBtn" class="hidden">見出しを編集する</button>
                 <button onclick="startWriting()" id="startWritingBtn" class="hidden">この構成で記事を書く</button>
+            </div>
+        </div>
+
+        <!-- 見出し編集セクション -->
+        <div class="card editor hidden" id="headingEditorCard">
+            <h2>📝 見出しを編集</h2>
+            <p style="color: #666; margin-bottom: 20px;">生成された見出しを自由に編集できます。順番の変更や文言の修正が可能です。</p>
+            <div id="headingsList"></div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="addNewHeading()" style="background: #27ae60;">➕ 見出しを追加</button>
+                <button onclick="confirmHeadings()" style="background: #e74c3c; color: white;">✅ この見出しで記事を作成</button>
+                <button onclick="backToOutline()" style="background: #95a5a6;">⬅️ 構成案に戻る</button>
             </div>
         </div>
 
@@ -529,12 +608,167 @@
                 `).join('')}
             `;
             outlineContent.innerHTML = html;
+            
+            // 生成された構成をグローバルに保存
+            window.currentOutline = outline;
+            
+            // ボタンを表示
+            document.getElementById('editHeadingsBtn').classList.remove('hidden');
             document.getElementById('startWritingBtn').classList.remove('hidden');
+        }
+
+        // 見出し編集機能
+        function showHeadingEditor() {
+            if (!window.currentOutline) {
+                alert('構成案が見つかりません。先に構成を生成してください。');
+                return;
+            }
+
+            // 見出し編集画面を表示
+            document.getElementById('headingEditorCard').classList.remove('hidden');
+            
+            // 見出しリストを生成
+            displayHeadingsEditor();
+            
+            // 見出し編集画面までスクロール
+            document.getElementById('headingEditorCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayHeadingsEditor() {
+            const headingsList = document.getElementById('headingsList');
+            const outline = window.currentOutline;
+            
+            // 編集可能な見出しリストを生成
+            let headingsHTML = '';
+            
+            // タイトル
+            headingsHTML += `
+                <div class="heading-item" data-type="title">
+                    <div class="heading-controls">
+                        <span class="drag-handle">📰</span>
+                        <span style="font-weight: bold; color: #2c3e50;">記事タイトル</span>
+                    </div>
+                    <input type="text" class="heading-input" value="${outline.title}" data-index="title">
+                </div>
+            `;
+            
+            // 各セクションの見出し
+            outline.sections.forEach((section, index) => {
+                headingsHTML += `
+                    <div class="heading-item" data-type="section" data-index="${index}">
+                        <div class="heading-controls">
+                            <span class="drag-handle">⋮⋮</span>
+                            <span style="font-weight: bold; color: #34495e;">##${index + 1}</span>
+                            <button class="delete-heading" onclick="deleteHeading(${index})">削除</button>
+                        </div>
+                        <input type="text" class="heading-input" value="${section.title}" data-index="${index}">
+                    </div>
+                `;
+            });
+            
+            headingsList.innerHTML = headingsHTML;
+            
+            // ドラッグ&ドロップ機能を有効化
+            enableDragAndDrop();
+        }
+
+        function enableDragAndDrop() {
+            const headingItems = document.querySelectorAll('.heading-item[data-type="section"]');
+            headingItems.forEach(item => {
+                item.draggable = true;
+                
+                item.addEventListener('dragstart', (e) => {
+                    item.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', item.dataset.index);
+                });
+                
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                });
+                
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+                
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const targetIndex = parseInt(item.dataset.index);
+                    
+                    if (draggedIndex !== targetIndex) {
+                        reorderHeadings(draggedIndex, targetIndex);
+                    }
+                });
+            });
+        }
+
+        function reorderHeadings(fromIndex, toIndex) {
+            const outline = window.currentOutline;
+            const sections = outline.sections;
+            
+            // 配列の要素を移動
+            const [movedSection] = sections.splice(fromIndex, 1);
+            sections.splice(toIndex, 0, movedSection);
+            
+            // 表示を更新
+            displayHeadingsEditor();
+        }
+
+        function deleteHeading(index) {
+            if (confirm('この見出しを削除しますか？')) {
+                window.currentOutline.sections.splice(index, 1);
+                displayHeadingsEditor();
+            }
+        }
+
+        function addNewHeading() {
+            const newHeading = prompt('新しい見出しを入力してください：');
+            if (newHeading && newHeading.trim()) {
+                window.currentOutline.sections.push({
+                    title: newHeading.trim(),
+                    content: '新しく追加されたセクションです。'
+                });
+                displayHeadingsEditor();
+            }
+        }
+
+        function confirmHeadings() {
+            // 編集された見出しを取得
+            const titleInput = document.querySelector('input[data-index="title"]');
+            const sectionInputs = document.querySelectorAll('.heading-item[data-type="section"] .heading-input');
+            
+            // タイトルを更新
+            if (titleInput) {
+                window.currentOutline.title = titleInput.value;
+            }
+            
+            // セクション見出しを更新
+            sectionInputs.forEach((input, index) => {
+                if (window.currentOutline.sections[index]) {
+                    window.currentOutline.sections[index].title = input.value;
+                }
+            });
+            
+            // 見出し編集画面を非表示
+            document.getElementById('headingEditorCard').classList.add('hidden');
+            
+            // 更新された構成を表示
+            displayOutline(window.currentOutline);
+            
+            // 記事作成に進む
+            startWriting();
+        }
+
+        function backToOutline() {
+            document.getElementById('headingEditorCard').classList.add('hidden');
         }
 
         function startWriting() {
             document.getElementById('editorCard').classList.remove('hidden');
-            const title = document.querySelector('.outline-item p').textContent;
+            
+            // 現在の構成から情報を取得（編集済みの可能性あり）
+            const outline = window.currentOutline;
+            const title = outline ? outline.title : document.querySelector('.outline-item p').textContent;
             document.getElementById('title').value = title;
             
             // ヒアリング内容を取得
@@ -545,8 +779,7 @@
             const keywords = document.getElementById('keywords').value;
             const subKeywords = document.getElementById('subKeywords').value;
             
-            // 構成を基にした記事テンプレートを生成
-            const sections = document.querySelectorAll('.outline-item');
+            // 構成を基にした記事テンプレートを生成（編集済み見出しを使用）
             let template = '';
             
             // ヒアリング内容をコメントとして記事の冒頭に追加
@@ -573,66 +806,69 @@
             }
             template += `\n`;
             
-            for (let i = 1; i < sections.length; i++) {
-                const sectionTitle = sections[i].querySelector('h3').textContent;
-                const sectionContent = sections[i].querySelector('p').textContent;
-                
-                if (sectionTitle.includes('はじめに')) {
-                    // 「はじめに」セクションには生成された文章を挿入
-                    template += `## ${sectionTitle}\n\n${sectionContent}\n\n`;
-                } else if (sectionTitle.includes('私の経験から') && experience) {
-                    // 経験セクションにはヒアリング内容をヒントとして追加
-                    template += `## ${sectionTitle}\n\n<!-- ヒント: ${experience} -->\n（上記のヒントを参考に、具体的な経験談を書いてください）\n\n`;
-                } else if (sectionTitle.includes('参考記事から学ぶポイント')) {
-                    // 参考記事専用セクション
-                    let refHints = `<!-- 参考記事の要約を基に重要なポイントを抽出 -->\n`;
-                    if (window.currentReferenceContent) {
-                        refHints += `<!-- 参考記事内容: ${window.currentReferenceContent.substring(0, 300)}... -->\n`;
-                    }
-                    template += `## ${sectionTitle}\n\n${refHints}（参考記事から学んだ重要なポイントを整理し、読者に分かりやすく解説してください）\n\n`;
-                } else if (sectionTitle.includes('とは？') || sectionTitle.includes('について')) {
-                    // 基本説明セクションにはヒアリング内容をヒントとして追加
-                    let hints = `<!-- ヒント: ${purpose} -->\n`;
-                    if (keywords) {
-                        hints += `<!-- メインキーワード: ${keywords} -->\n`;
-                    }
-                    if (subKeywords) {
-                        hints += `<!-- サブキーワード: ${subKeywords} -->\n`;
-                    }
-                    if (referenceUrl) {
-                        hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
+            // 編集済みの構成を使用してテンプレートを生成
+            if (outline && outline.sections) {
+                outline.sections.forEach((section, index) => {
+                    const sectionTitle = section.title;
+                    const sectionContent = section.content;
+                    
+                    if (sectionTitle.includes('はじめに')) {
+                        // 「はじめに」セクションには生成された文章を挿入
+                        template += `## ${sectionTitle}\n\n${sectionContent}\n\n`;
+                    } else if (sectionTitle.includes('私の経験から') && experience) {
+                        // 経験セクションにはヒアリング内容をヒントとして追加
+                        template += `## ${sectionTitle}\n\n<!-- ヒント: ${experience} -->\n（上記のヒントを参考に、具体的な経験談を書いてください）\n\n`;
+                    } else if (sectionTitle.includes('参考記事から学ぶポイント')) {
+                        // 参考記事専用セクション
+                        let refHints = `<!-- 参考記事の要約を基に重要なポイントを抽出 -->\n`;
                         if (window.currentReferenceContent) {
-                            hints += `<!-- 参考記事のキーポイント: ${window.currentReferenceContent.substring(0, 150)}... -->\n`;
+                            refHints += `<!-- 参考記事内容: ${window.currentReferenceContent.substring(0, 300)}... -->\n`;
                         }
-                    }
-                    template += `## ${sectionTitle}\n\n${hints}（${topic}について、一般の方向けに分かりやすく説明してください。キーワードを適切に使用してください）\n\n`;
-                } else if (sectionTitle.includes('まとめ')) {
-                    // まとめセクションには記事の目的を反映
-                    let summaryHints = `<!-- ヒント: 記事の目的 - ${purpose} -->\n`;
-                    if (window.currentReferenceContent) {
-                        summaryHints += `<!-- 参考記事の結論も踏まえてまとめる -->\n`;
-                    }
-                    template += `## ${sectionTitle}\n\n${summaryHints}（記事の要点をまとめ、読者への次のアクションを提案してください）\n\n`;
-                } else {
-                    // その他のセクションにもキーワード情報と参考URLがあれば追加
-                    let hints = '';
-                    if (keywords || subKeywords) {
-                        hints += `<!-- キーワード活用のヒント -->\n`;
+                        template += `## ${sectionTitle}\n\n${refHints}（参考記事から学んだ重要なポイントを整理し、読者に分かりやすく解説してください）\n\n`;
+                    } else if (sectionTitle.includes('とは？') || sectionTitle.includes('について')) {
+                        // 基本説明セクションにはヒアリング内容をヒントとして追加
+                        let hints = `<!-- ヒント: ${purpose} -->\n`;
                         if (keywords) {
                             hints += `<!-- メインキーワード: ${keywords} -->\n`;
                         }
                         if (subKeywords) {
                             hints += `<!-- サブキーワード: ${subKeywords} -->\n`;
                         }
-                    }
-                    if (referenceUrl) {
-                        hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
-                        if (window.currentReferenceContent) {
-                            hints += `<!-- 参考情報: ${window.currentReferenceContent.substring(0, 100)}... -->\n`;
+                        if (referenceUrl) {
+                            hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
+                            if (window.currentReferenceContent) {
+                                hints += `<!-- 参考記事のキーポイント: ${window.currentReferenceContent.substring(0, 150)}... -->\n`;
+                            }
                         }
+                        template += `## ${sectionTitle}\n\n${hints}（${topic}について、一般の方向けに分かりやすく説明してください。キーワードを適切に使用してください）\n\n`;
+                    } else if (sectionTitle.includes('まとめ')) {
+                        // まとめセクションには記事の目的を反映
+                        let summaryHints = `<!-- ヒント: 記事の目的 - ${purpose} -->\n`;
+                        if (window.currentReferenceContent) {
+                            summaryHints += `<!-- 参考記事の結論も踏まえてまとめる -->\n`;
+                        }
+                        template += `## ${sectionTitle}\n\n${summaryHints}（記事の要点をまとめ、読者への次のアクションを提案してください）\n\n`;
+                    } else {
+                        // その他のセクションにもキーワード情報と参考URLがあれば追加
+                        let hints = '';
+                        if (keywords || subKeywords) {
+                            hints += `<!-- キーワード活用のヒント -->\n`;
+                            if (keywords) {
+                                hints += `<!-- メインキーワード: ${keywords} -->\n`;
+                            }
+                            if (subKeywords) {
+                                hints += `<!-- サブキーワード: ${subKeywords} -->\n`;
+                            }
+                        }
+                        if (referenceUrl) {
+                            hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
+                            if (window.currentReferenceContent) {
+                                hints += `<!-- 参考情報: ${window.currentReferenceContent.substring(0, 100)}... -->\n`;
+                            }
+                        }
+                        template += `## ${sectionTitle}\n\n${hints}（ここに内容を書いてください。適切にキーワードを含めてください）\n\n`;
                     }
-                    template += `## ${sectionTitle}\n\n${hints}（ここに内容を書いてください。適切にキーワードを含めてください）\n\n`;
-                }
+                });
             }
             
             document.getElementById('content').value = template;
