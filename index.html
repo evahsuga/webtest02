@@ -218,14 +218,8 @@
                     <input type="text" id="topic" placeholder="例：プログラミング学習について">
                 </div>
                 <div class="form-group">
-                    <label for="target">想定読者</label>
-                    <select id="target">
-                        <option value="">選択してください</option>
-                        <option value="beginner">初心者</option>
-                        <option value="intermediate">中級者</option>
-                        <option value="advanced">上級者</option>
-                        <option value="general">一般の方</option>
-                    </select>
+                    <label for="referenceUrl">参考記事URL（任意）</label>
+                    <input type="url" id="referenceUrl" placeholder="参考にしたい記事のURLを入力してください（例：https://example.com/article）">
                 </div>
                 <div class="form-group">
                     <label for="purpose">記事の目的</label>
@@ -277,35 +271,61 @@
 
     <script>
         // ブログ構成提案機能
-        function generateOutline() {
+        async function generateOutline() {
             const topic = document.getElementById('topic').value;
-            const target = document.getElementById('target').value;
             const purpose = document.getElementById('purpose').value;
             const experience = document.getElementById('experience').value;
+            const referenceUrl = document.getElementById('referenceUrl').value;
 
-            if (!topic || !target || !purpose) {
-                alert('必須項目を入力してください');
+            if (!topic || !purpose) {
+                alert('話題・テーマと記事の目的を入力してください');
                 return;
             }
 
-            // シンプルな構成生成ロジック
-            const outline = generateBlogOutline(topic, target, purpose, experience);
+            // 参考URLからコンテンツを取得
+            let referenceContent = '';
+            if (referenceUrl) {
+                try {
+                    const fetchButton = document.querySelector('button[onclick="generateOutline()"]');
+                    fetchButton.disabled = true;
+                    fetchButton.textContent = '参考記事を読み込み中...';
+                    
+                    referenceContent = await fetchReferenceContent(referenceUrl);
+                } catch (error) {
+                    console.error('参考記事の取得に失敗:', error);
+                    alert('参考記事の読み込みに失敗しました。URLを確認してください。');
+                } finally {
+                    document.querySelector('button[onclick="generateOutline()"]').disabled = false;
+                    document.querySelector('button[onclick="generateOutline()"]').textContent = '構成を提案してもらう';
+                }
+            }
+
+            // シンプルな構成生成ロジック（一般向けに固定）
+            const outline = generateBlogOutline(topic, 'general', purpose, experience, referenceContent);
             displayOutline(outline);
         }
 
-        function generateBlogOutline(topic, target, purpose, experience) {
-            const targetMap = {
-                'beginner': '初心者',
-                'intermediate': '中級者',
-                'advanced': '上級者',
-                'general': '一般の方'
-            };
+        // 参考記事からコンテンツを取得する関数
+        async function fetchReferenceContent(url) {
+            // シンプルなURL検証
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                throw new Error('有効なURLを入力してください');
+            }
+            
+            // 実際のWebFetch機能は制限があるため、URL情報のみ保存
+            return `参考記事URL: ${url}`;
+        }
+
+        function generateBlogOutline(topic, target, purpose, experience, referenceContent = '') {
+            // 常に一般向けに固定
+            const targetText = '一般の方';
 
             // AIによる「はじめに」文章生成
-            const introText = generateIntroText(topic, target, purpose, experience);
+            const introText = generateIntroText(topic, 'general', purpose, experience);
 
             return {
-                title: `${targetMap[target]}向け：${topic}について`,
+                title: `${targetText}向け：${topic}について`,
+                referenceContent: referenceContent,
                 sections: [
                     {
                         title: 'はじめに',
@@ -320,8 +340,8 @@
                         content: experience || '実際の例や事例を紹介'
                     },
                     {
-                        title: target === 'beginner' ? '始め方・注意点' : 'ポイント・コツ',
-                        content: target === 'beginner' ? '初心者が始める際の手順と注意点' : '効果的に進めるためのポイント'
+                        title: 'ポイント・コツ',
+                        content: '効果的に進めるためのポイント'
                     },
                     {
                         title: 'まとめ',
@@ -356,16 +376,9 @@
             
             // ヒアリング内容を取得
             const topic = document.getElementById('topic').value;
-            const target = document.getElementById('target').value;
             const purpose = document.getElementById('purpose').value;
             const experience = document.getElementById('experience').value;
-            
-            const targetMap = {
-                'beginner': '初心者',
-                'intermediate': '中級者',
-                'advanced': '上級者',
-                'general': '一般の方'
-            };
+            const referenceUrl = document.getElementById('referenceUrl').value;
             
             // 構成を基にした記事テンプレートを生成
             const sections = document.querySelectorAll('.outline-item');
@@ -374,10 +387,13 @@
             // ヒアリング内容をコメントとして記事の冒頭に追加
             template += `<!-- ヒアリング内容 -->\n`;
             template += `<!-- 話題・テーマ: ${topic} -->\n`;
-            template += `<!-- 想定読者: ${targetMap[target] || target} -->\n`;
+            template += `<!-- 想定読者: 一般の方 -->\n`;
             template += `<!-- 記事の目的: ${purpose} -->\n`;
             if (experience) {
                 template += `<!-- 関連する経験・知識: ${experience} -->\n`;
+            }
+            if (referenceUrl) {
+                template += `<!-- 参考記事URL: ${referenceUrl} -->\n`;
             }
             template += `\n`;
             
@@ -393,12 +409,21 @@
                     template += `## ${sectionTitle}\n\n<!-- ヒント: ${experience} -->\n（上記のヒントを参考に、具体的な経験談を書いてください）\n\n`;
                 } else if (sectionTitle.includes('とは？') || sectionTitle.includes('について')) {
                     // 基本説明セクションにはヒアリング内容をヒントとして追加
-                    template += `## ${sectionTitle}\n\n<!-- ヒント: ${purpose} -->\n（${topic}について、${targetMap[target] || target}向けに分かりやすく説明してください）\n\n`;
+                    let hints = `<!-- ヒント: ${purpose} -->\n`;
+                    if (referenceUrl) {
+                        hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
+                    }
+                    template += `## ${sectionTitle}\n\n${hints}（${topic}について、一般の方向けに分かりやすく説明してください）\n\n`;
                 } else if (sectionTitle.includes('まとめ')) {
                     // まとめセクションには記事の目的を反映
                     template += `## ${sectionTitle}\n\n<!-- ヒント: 記事の目的 - ${purpose} -->\n（記事の要点をまとめ、読者への次のアクションを提案してください）\n\n`;
                 } else {
-                    template += `## ${sectionTitle}\n\n（ここに内容を書いてください）\n\n`;
+                    // その他のセクションにも参考URLがあれば追加
+                    let hints = '';
+                    if (referenceUrl) {
+                        hints = `<!-- 参考記事: ${referenceUrl} -->\n`;
+                    }
+                    template += `## ${sectionTitle}\n\n${hints}（ここに内容を書いてください）\n\n`;
                 }
             }
             
@@ -433,44 +458,16 @@
             alert('記事が保存されました！');
         }
 
-        // AIによる「はじめに」文章生成機能
+        // AIによる「はじめに」文章生成機能（一般向けに固定）
         function generateIntroText(topic, target, purpose, experience) {
-            const targetMap = {
-                'beginner': '初心者',
-                'intermediate': '中級者', 
-                'advanced': '上級者',
-                'general': '一般'
-            };
+            const template = [
+                `${topic}について関心をお持ちの皆さん、はじめまして。`,
+                `この記事では、${topic}の魅力や重要性について、誰にでも理解できる形でお伝えします。`,
+                `${purpose}ために、身近な例を用いながら分かりやすく解説していきます。`,
+                experience ? `実体験に基づく具体的なエピソードも交えてご紹介します。` : `日常生活との関連性を重視した内容でお届けします。`
+            ];
 
-            const templates = {
-                beginner: [
-                    `${topic}に興味を持ち始めた${targetMap[target]}の皆さん、こんにちは。`,
-                    `この記事では、${topic}について基礎から分かりやすく解説していきます。`,
-                    `${purpose}ことを目指して、実践的な内容をお届けします。`,
-                    experience ? `私自身の経験を交えながら、つまずきやすいポイントも含めてご紹介します。` : `具体例を豊富に用いて、理解しやすい形でお伝えします。`
-                ],
-                intermediate: [
-                    `${topic}についてある程度の知識をお持ちの${targetMap[target]}の方へ。`,
-                    `この記事では、さらなるスキルアップを目指し、${purpose}内容を扱います。`,
-                    experience ? `実際の経験から得た知見を共有し、より実践的なアプローチをご提案します。` : `実用的な事例とともに、深い理解へと導きます。`,
-                    `日常の業務や学習に直接活かせる情報をお届けします。`
-                ],
-                advanced: [
-                    `${topic}の専門知識をお持ちの${targetMap[target]}の皆様に向けて。`,
-                    `この記事では、${purpose}高度な内容を扱います。`,
-                    experience ? `豊富な経験に基づく専門的な視点から、深層的な分析をお届けします。` : `最新の動向と実践的な応用例を中心に解説します。`,
-                    `業界のベストプラクティスと革新的なアプローチを探求していきます。`
-                ],
-                general: [
-                    `${topic}について関心をお持ちの皆さん、はじめまして。`,
-                    `この記事では、${topic}の魅力や重要性について、誰にでも理解できる形でお伝えします。`,
-                    `${purpose}ために、身近な例を用いながら分かりやすく解説していきます。`,
-                    experience ? `実体験に基づく具体的なエピソードも交えてご紹介します。` : `日常生活との関連性を重視した内容でお届けします。`
-                ]
-            };
-
-            const selectedTemplate = templates[target] || templates.general;
-            return selectedTemplate.join(' ');
+            return template.join(' ');
         }
 
         // 保存済み記事一覧表示機能
