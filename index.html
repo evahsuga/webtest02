@@ -478,43 +478,70 @@
         }
 
         function loadArticleByIndex(index) {
-            const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
-            if (savedArticles[index]) {
-                const article = savedArticles[index];
+            try {
+                const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+                console.log('保存済み記事データ:', savedArticles);
+                console.log('選択されたインデックス:', index);
                 
-                // 編集画面を表示
-                const editorCard = document.getElementById('editorCard');
-                if (editorCard) {
-                    editorCard.classList.remove('hidden');
-                }
-                
-                // 記事内容を編集フィールドに設定
-                const titleField = document.getElementById('title');
-                const contentField = document.getElementById('content');
-                
-                if (titleField && contentField) {
-                    titleField.value = article.title || '';
-                    contentField.value = article.content || '';
+                if (savedArticles[index]) {
+                    const article = savedArticles[index];
+                    console.log('読み込む記事:', article);
                     
-                    // フィールドにフォーカスを当てて編集可能であることを明確に
-                    setTimeout(() => {
-                        titleField.focus();
-                    }, 100);
-                }
-                
-                // 一覧を非表示
-                hideArticlesList();
-                
-                // 編集画面までスクロール
-                setTimeout(() => {
+                    // 編集画面を表示
+                    const editorCard = document.getElementById('editorCard');
                     if (editorCard) {
-                        editorCard.scrollIntoView({ behavior: 'smooth' });
+                        editorCard.classList.remove('hidden');
+                        console.log('編集画面を表示しました');
                     }
-                }, 200);
-                
-                console.log('記事を読み込みました:', article.title);
-            } else {
-                alert('記事の読み込みに失敗しました');
+                    
+                    // 記事内容を編集フィールドに設定
+                    const titleField = document.getElementById('title');
+                    const contentField = document.getElementById('content');
+                    
+                    console.log('タイトルフィールド:', titleField);
+                    console.log('コンテンツフィールド:', contentField);
+                    
+                    if (titleField && contentField) {
+                        // 確実に値を設定
+                        titleField.value = String(article.title || '');
+                        contentField.value = String(article.content || '');
+                        
+                        console.log('設定されたタイトル:', titleField.value);
+                        console.log('設定されたコンテンツ:', contentField.value);
+                        
+                        // フィールドを有効化
+                        titleField.disabled = false;
+                        contentField.disabled = false;
+                        
+                        // フィールドにフォーカスを当てて編集可能であることを明確に
+                        setTimeout(() => {
+                            titleField.focus();
+                            titleField.select();
+                        }, 300);
+                    } else {
+                        console.error('編集フィールドが見つかりません');
+                        alert('編集フィールドが見つかりません。ページを再読み込みしてください。');
+                        return;
+                    }
+                    
+                    // 一覧を非表示
+                    hideArticlesList();
+                    
+                    // 編集画面までスクロール
+                    setTimeout(() => {
+                        if (editorCard) {
+                            editorCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 400);
+                    
+                    alert(`「${article.title}」を読み込みました。編集してください。`);
+                } else {
+                    console.error('記事が見つかりません。インデックス:', index);
+                    alert('選択された記事が見つかりません');
+                }
+            } catch (error) {
+                console.error('記事読み込みエラー:', error);
+                alert('記事の読み込み中にエラーが発生しました: ' + error.message);
             }
         }
 
