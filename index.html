@@ -235,7 +235,11 @@
                     <label for="experience">関連する経験・知識</label>
                     <textarea id="experience" placeholder="この話題に関するあなたの経験や専門知識があれば教えてください"></textarea>
                 </div>
-                <button onclick="generateOutline()">構成を提案してもらう</button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="generateOutline()">構成を提案してもらう</button>
+                    <button onclick="showSavedArticlesList()" style="background: #27ae60;">📚 保存済み記事一覧</button>
+                </div>
+                <div id="topArticlesList" class="article-list hidden"></div>
             </div>
 
             <!-- 構成提案 -->
@@ -438,7 +442,8 @@
         // 保存済み記事一覧表示機能
         function showSavedArticlesList() {
             const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
-            const articlesList = document.getElementById('articlesList');
+            // TOPページかエディターページかを判定
+            const articlesList = document.getElementById('topArticlesList') || document.getElementById('articlesList');
             
             if (savedArticles.length === 0) {
                 articlesList.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">保存された記事がありません</p>';
@@ -466,7 +471,10 @@
         }
 
         function hideArticlesList() {
-            document.getElementById('articlesList').classList.add('hidden');
+            const topList = document.getElementById('topArticlesList');
+            const editorList = document.getElementById('articlesList');
+            if (topList) topList.classList.add('hidden');
+            if (editorList) editorList.classList.add('hidden');
         }
 
         function loadArticleByIndex(index) {
