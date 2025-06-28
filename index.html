@@ -318,8 +318,10 @@
                         左側のフォームに入力して「構成を提案してもらう」ボタンを押してください
                     </p>
                 </div>
-                <button onclick="showHeadingEditor()" id="editHeadingsBtn" class="hidden">見出しを編集する</button>
-                <button onclick="startWriting()" id="startWritingBtn" class="hidden">この構成で記事を書く</button>
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <button onclick="showHeadingEditor()" id="editHeadingsBtn" class="hidden" style="background: #f39c12; color: white;">📝 見出しを編集する</button>
+                    <button onclick="startWriting()" id="startWritingBtn" class="hidden" style="background: #e74c3c; color: white;">✍️ この構成で記事を書く</button>
+                </div>
             </div>
         </div>
 
@@ -613,25 +615,59 @@
             window.currentOutline = outline;
             
             // ボタンを表示
-            document.getElementById('editHeadingsBtn').classList.remove('hidden');
-            document.getElementById('startWritingBtn').classList.remove('hidden');
+            const editBtn = document.getElementById('editHeadingsBtn');
+            const startBtn = document.getElementById('startWritingBtn');
+            
+            if (editBtn) {
+                editBtn.classList.remove('hidden');
+                editBtn.style.display = 'inline-block';
+                editBtn.style.visibility = 'visible';
+                editBtn.style.opacity = '1';
+                console.log('見出し編集ボタンを表示しました');
+                
+                // ボタンがクリック可能であることを確認
+                editBtn.addEventListener('click', function() {
+                    console.log('見出し編集ボタンがクリックされました');
+                    showHeadingEditor();
+                });
+            }
+            
+            if (startBtn) {
+                startBtn.classList.remove('hidden');
+                startBtn.style.display = 'inline-block';
+                startBtn.style.visibility = 'visible';
+                startBtn.style.opacity = '1';
+                console.log('記事作成ボタンを表示しました');
+            }
         }
 
         // 見出し編集機能
         function showHeadingEditor() {
+            console.log('見出し編集機能が呼び出されました');
+            console.log('現在の構成:', window.currentOutline);
+            
             if (!window.currentOutline) {
                 alert('構成案が見つかりません。先に構成を生成してください。');
                 return;
             }
 
             // 見出し編集画面を表示
-            document.getElementById('headingEditorCard').classList.remove('hidden');
+            const editorCard = document.getElementById('headingEditorCard');
+            if (editorCard) {
+                editorCard.classList.remove('hidden');
+                console.log('見出し編集画面を表示しました');
+            } else {
+                console.error('見出し編集画面が見つかりません');
+                return;
+            }
             
             // 見出しリストを生成
             displayHeadingsEditor();
             
             // 見出し編集画面までスクロール
-            document.getElementById('headingEditorCard').scrollIntoView({ behavior: 'smooth' });
+            setTimeout(() => {
+                editorCard.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
         }
 
         function displayHeadingsEditor() {
