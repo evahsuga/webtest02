@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ブログ作成支援アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #34495e;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .outline-section {
+            margin-top: 20px;
+        }
+
+        .outline-item {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .outline-item h3 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .outline-item p {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .editor {
+            grid-column: 1 / -1;
+        }
+
+        .editor textarea {
+            min-height: 400px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>ブログ作成支援アプリ</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- 話題ヒアリング -->
+            <div class="card" id="topicCard">
+                <h2>📝 話題をお聞かせください</h2>
+                <div class="form-group">
+                    <label for="topic">書きたい話題・テーマ</label>
+                    <input type="text" id="topic" placeholder="例：プログラミング学習について">
+                </div>
+                <div class="form-group">
+                    <label for="target">想定読者</label>
+                    <select id="target">
+                        <option value="">選択してください</option>
+                        <option value="beginner">初心者</option>
+                        <option value="intermediate">中級者</option>
+                        <option value="advanced">上級者</option>
+                        <option value="general">一般の方</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="purpose">記事の目的</label>
+                    <textarea id="purpose" placeholder="この記事で読者に何を伝えたいか、どんな価値を提供したいかを教えてください"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="experience">関連する経験・知識</label>
+                    <textarea id="experience" placeholder="この話題に関するあなたの経験や専門知識があれば教えてください"></textarea>
+                </div>
+                <button onclick="generateOutline()">構成を提案してもらう</button>
+            </div>
+
+            <!-- 構成提案 -->
+            <div class="card" id="outlineCard">
+                <h2>📋 記事構成案</h2>
+                <div id="outlineContent">
+                    <p style="color: #7f8c8d; text-align: center; padding: 40px 0;">
+                        左側のフォームに入力して「構成を提案してもらう」ボタンを押してください
+                    </p>
+                </div>
+                <button onclick="startWriting()" id="startWritingBtn" class="hidden">この構成で記事を書く</button>
+            </div>
+        </div>
+
+        <!-- 記事エディター -->
+        <div class="card editor hidden" id="editorCard">
+            <h2>✍️ 記事を書く</h2>
+            <div class="form-group">
+                <label for="title">記事タイトル</label>
+                <input type="text" id="title" placeholder="記事のタイトルを入力">
+            </div>
+            <div class="form-group">
+                <label for="content">記事内容（Markdown形式）</label>
+                <textarea id="content" placeholder="ここに記事を書いてください。Markdown記法が使えます。"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="saveArticle()">記事を保存</button>
+                <button onclick="previewArticle()">プレビュー</button>
+                <button onclick="loadSavedArticles()">保存済み記事</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ブログ構成提案機能
+        function generateOutline() {
+            const topic = document.getElementById('topic').value;
+            const target = document.getElementById('target').value;
+            const purpose = document.getElementById('purpose').value;
+            const experience = document.getElementById('experience').value;
+
+            if (!topic || !target || !purpose) {
+                alert('必須項目を入力してください');
+                return;
+            }
+
+            // シンプルな構成生成ロジック
+            const outline = generateBlogOutline(topic, target, purpose, experience);
+            displayOutline(outline);
+        }
+
+        function generateBlogOutline(topic, target, purpose, experience) {
+            const targetMap = {
+                'beginner': '初心者',
+                'intermediate': '中級者',
+                'advanced': '上級者',
+                'general': '一般の方'
+            };
+
+            return {
+                title: `${targetMap[target]}向け：${topic}について`,
+                sections: [
+                    {
+                        title: 'はじめに',
+                        content: `${topic}について、${targetMap[target]}の方にも分かりやすく解説します。${purpose}`
+                    },
+                    {
+                        title: `${topic}とは？`,
+                        content: '基本的な概念や定義を説明'
+                    },
+                    {
+                        title: experience ? '私の経験から' : '具体例・事例',
+                        content: experience || '実際の例や事例を紹介'
+                    },
+                    {
+                        title: target === 'beginner' ? '始め方・注意点' : 'ポイント・コツ',
+                        content: target === 'beginner' ? '初心者が始める際の手順と注意点' : '効果的に進めるためのポイント'
+                    },
+                    {
+                        title: 'まとめ',
+                        content: '記事の要点をまとめ、読者への次のアクションを提案'
+                    }
+                ]
+            };
+        }
+
+        function displayOutline(outline) {
+            const outlineContent = document.getElementById('outlineContent');
+            const html = `
+                <div class="outline-item">
+                    <h3>📰 提案タイトル</h3>
+                    <p>${outline.title}</p>
+                </div>
+                ${outline.sections.map((section, index) => `
+                    <div class="outline-item">
+                        <h3>${index + 1}. ${section.title}</h3>
+                        <p>${section.content}</p>
+                    </div>
+                `).join('')}
+            `;
+            outlineContent.innerHTML = html;
+            document.getElementById('startWritingBtn').classList.remove('hidden');
+        }
+
+        function startWriting() {
+            document.getElementById('editorCard').classList.remove('hidden');
+            const title = document.querySelector('.outline-item p').textContent;
+            document.getElementById('title').value = title;
+            
+            // 構成を基にした記事テンプレートを生成
+            const sections = document.querySelectorAll('.outline-item');
+            let template = '';
+            for (let i = 1; i < sections.length; i++) {
+                const sectionTitle = sections[i].querySelector('h3').textContent;
+                template += `\n## ${sectionTitle}\n\n（ここに内容を書いてください）\n\n`;
+            }
+            document.getElementById('content').value = template;
+            
+            // エディターまでスクロール
+            document.getElementById('editorCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ローカルストレージ機能
+        function saveArticle() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            
+            if (!title || !content) {
+                alert('タイトルと内容を入力してください');
+                return;
+            }
+
+            const article = {
+                id: Date.now(),
+                title: title,
+                content: content,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            savedArticles.push(article);
+            localStorage.setItem('blogArticles', JSON.stringify(savedArticles));
+            
+            alert('記事が保存されました！');
+        }
+
+        function loadSavedArticles() {
+            const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            if (savedArticles.length === 0) {
+                alert('保存された記事がありません');
+                return;
+            }
+
+            const articleList = savedArticles.map(article => 
+                `${article.title} (${new Date(article.createdAt).toLocaleDateString()})`
+            ).join('\n');
+            
+            const selection = prompt(`保存済み記事:\n${articleList}\n\n読み込みたい記事の番号を入力してください (1-${savedArticles.length})`);
+            
+            if (selection && !isNaN(selection) && selection >= 1 && selection <= savedArticles.length) {
+                const selectedArticle = savedArticles[selection - 1];
+                document.getElementById('title').value = selectedArticle.title;
+                document.getElementById('content').value = selectedArticle.content;
+            }
+        }
+
+        function previewArticle() {
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            
+            if (!title || !content) {
+                alert('タイトルと内容を入力してください');
+                return;
+            }
+
+            const previewWindow = window.open('', '_blank');
+            previewWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: 'Hiragino Sans', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                        h1, h2, h3 { color: #2c3e50; }
+                        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; }
+                        code { background: #f4f4f4; padding: 2px 4px; border-radius: 3px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    <div>${content.replace(/\n/g, '<br>')}</div>
+                </body>
+                </html>
+            `);
+        }
+    </script>
+</body>
+</html>
