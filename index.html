@@ -483,19 +483,38 @@
                 const article = savedArticles[index];
                 
                 // 編集画面を表示
-                document.getElementById('editorCard').classList.remove('hidden');
+                const editorCard = document.getElementById('editorCard');
+                if (editorCard) {
+                    editorCard.classList.remove('hidden');
+                }
                 
                 // 記事内容を編集フィールドに設定
-                document.getElementById('title').value = article.title;
-                document.getElementById('content').value = article.content;
+                const titleField = document.getElementById('title');
+                const contentField = document.getElementById('content');
+                
+                if (titleField && contentField) {
+                    titleField.value = article.title || '';
+                    contentField.value = article.content || '';
+                    
+                    // フィールドにフォーカスを当てて編集可能であることを明確に
+                    setTimeout(() => {
+                        titleField.focus();
+                    }, 100);
+                }
                 
                 // 一覧を非表示
                 hideArticlesList();
                 
                 // 編集画面までスクロール
-                document.getElementById('editorCard').scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                    if (editorCard) {
+                        editorCard.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 200);
                 
-                alert(`「${article.title}」を読み込みました`);
+                console.log('記事を読み込みました:', article.title);
+            } else {
+                alert('記事の読み込みに失敗しました');
             }
         }
 
