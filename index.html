@@ -353,6 +353,8 @@
                 <button onclick="previewArticle()">プレビュー</button>
                 <button onclick="showSavedArticlesList()">保存済み記事一覧</button>
                 <button onclick="loadSavedArticles()" style="background: #27ae60;">記事を読み込み</button>
+                <button onclick="debugLocalStorage()" style="background: #f39c12; font-size: 12px;">データ確認</button>
+                <button onclick="clearAllArticles()" style="background: #e74c3c; font-size: 12px;">全削除</button>
             </div>
             <div id="articlesList" class="article-list hidden"></div>
         </div>
@@ -939,8 +941,18 @@
             };
 
             const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            console.log('保存前の記事一覧:', savedArticles);
+            console.log('保存前の記事数:', savedArticles.length);
+            
             savedArticles.push(article);
+            console.log('保存後の記事一覧:', savedArticles);
+            console.log('保存後の記事数:', savedArticles.length);
+            
             localStorage.setItem('blogArticles', JSON.stringify(savedArticles));
+            
+            // 保存の確認
+            const checkSaved = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            console.log('localStorage確認 - 保存された記事数:', checkSaved.length);
             
             alert('記事が保存されました！');
         }
@@ -1041,6 +1053,9 @@
         // 保存済み記事一覧表示機能
         function showSavedArticlesList() {
             const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            console.log('showSavedArticlesList - 取得した記事データ:', savedArticles);
+            console.log('記事数:', savedArticles.length);
+            
             // TOPページかエディターページかを判定
             const articlesList = document.getElementById('topArticlesList') || document.getElementById('articlesList');
             
@@ -1050,10 +1065,17 @@
                 return;
             }
 
-            const listHTML = savedArticles.map((article, index) => {
+            // 記事を新しい順にソート（元の配列を変更せずにコピーを作成）
+            const sortedArticles = [...savedArticles].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            console.log('ソート後の記事:', sortedArticles);
+
+            const listHTML = sortedArticles.map((article, sortedIndex) => {
                 const preview = article.content.replace(/#+\s*/g, '').substring(0, 80) + '...';
+                // 元の配列でのインデックスを使用
+                const originalIndex = savedArticles.findIndex(item => item.id === article.id);
+                console.log(`記事 "${article.title}" - ソート後index: ${sortedIndex}, 元のindex: ${originalIndex}`);
                 return `
-                    <div class="article-item" onclick="loadArticleByIndex(${index})">
+                    <div class="article-item" onclick="loadArticleByIndex(${originalIndex})">
                         <h4>${article.title}</h4>
                         <div class="article-date">${new Date(article.createdAt).toLocaleDateString('ja-JP')}</div>
                         <div class="article-preview">${preview}</div>
@@ -1193,6 +1215,40 @@
                 </body>
                 </html>
             `);
+        }
+
+        // デバッグ用：localStorage内容確認関数
+        function debugLocalStorage() {
+            const data = localStorage.getItem('blogArticles');
+            console.log('localStorage raw data:', data);
+            
+            if (data) {
+                try {
+                    const parsed = JSON.parse(data);
+                    console.log('Parsed articles:', parsed);
+                    console.log('Number of articles:', parsed.length);
+                    
+                    parsed.forEach((article, index) => {
+                        console.log(`Article ${index + 1}:`, article.title, '- Created:', article.createdAt);
+                    });
+                    
+                    alert(`localStorage内に${parsed.length}件の記事があります。詳細はコンソールを確認してください。`);
+                } catch (error) {
+                    console.error('JSON parse error:', error);
+                    alert('localStorageのデータが壊れています');
+                }
+            } else {
+                alert('localStorageに記事データがありません');
+            }
+        }
+
+        // デバッグ用：localStorage完全クリア
+        function clearAllArticles() {
+            if (confirm('全ての保存済み記事を削除しますか？この操作は取り消せません。')) {
+                localStorage.removeItem('blogArticles');
+                alert('全ての記事が削除されました');
+                console.log('localStorage cleared');
+            }
         }
     </script>
 </body>
