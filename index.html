@@ -354,20 +354,54 @@
             const title = document.querySelector('.outline-item p').textContent;
             document.getElementById('title').value = title;
             
+            // ヒアリング内容を取得
+            const topic = document.getElementById('topic').value;
+            const target = document.getElementById('target').value;
+            const purpose = document.getElementById('purpose').value;
+            const experience = document.getElementById('experience').value;
+            
+            const targetMap = {
+                'beginner': '初心者',
+                'intermediate': '中級者',
+                'advanced': '上級者',
+                'general': '一般の方'
+            };
+            
             // 構成を基にした記事テンプレートを生成
             const sections = document.querySelectorAll('.outline-item');
             let template = '';
+            
+            // ヒアリング内容をコメントとして記事の冒頭に追加
+            template += `<!-- ヒアリング内容 -->\n`;
+            template += `<!-- 話題・テーマ: ${topic} -->\n`;
+            template += `<!-- 想定読者: ${targetMap[target] || target} -->\n`;
+            template += `<!-- 記事の目的: ${purpose} -->\n`;
+            if (experience) {
+                template += `<!-- 関連する経験・知識: ${experience} -->\n`;
+            }
+            template += `\n`;
+            
             for (let i = 1; i < sections.length; i++) {
                 const sectionTitle = sections[i].querySelector('h3').textContent;
                 const sectionContent = sections[i].querySelector('p').textContent;
                 
                 if (sectionTitle.includes('はじめに')) {
                     // 「はじめに」セクションには生成された文章を挿入
-                    template += `\n## ${sectionTitle}\n\n${sectionContent}\n\n`;
+                    template += `## ${sectionTitle}\n\n${sectionContent}\n\n`;
+                } else if (sectionTitle.includes('私の経験から') && experience) {
+                    // 経験セクションにはヒアリング内容をヒントとして追加
+                    template += `## ${sectionTitle}\n\n<!-- ヒント: ${experience} -->\n（上記のヒントを参考に、具体的な経験談を書いてください）\n\n`;
+                } else if (sectionTitle.includes('とは？') || sectionTitle.includes('について')) {
+                    // 基本説明セクションにはヒアリング内容をヒントとして追加
+                    template += `## ${sectionTitle}\n\n<!-- ヒント: ${purpose} -->\n（${topic}について、${targetMap[target] || target}向けに分かりやすく説明してください）\n\n`;
+                } else if (sectionTitle.includes('まとめ')) {
+                    // まとめセクションには記事の目的を反映
+                    template += `## ${sectionTitle}\n\n<!-- ヒント: 記事の目的 - ${purpose} -->\n（記事の要点をまとめ、読者への次のアクションを提案してください）\n\n`;
                 } else {
-                    template += `\n## ${sectionTitle}\n\n（ここに内容を書いてください）\n\n`;
+                    template += `## ${sectionTitle}\n\n（ここに内容を書いてください）\n\n`;
                 }
             }
+            
             document.getElementById('content').value = template;
             
             // エディターまでスクロール
