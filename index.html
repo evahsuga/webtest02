@@ -433,34 +433,53 @@
                     '基本的な概念や定義を説明'
             });
 
-            // 3. サブキーワードを活用したセクション生成
+            // 3. サブキーワードを活用した中項目生成（最大3つ）
             if (subKeywords.length > 0) {
-                // 最初のサブキーワードを使用
-                const firstSubKeyword = subKeywords[0];
-                sections.push({
-                    title: `${firstSubKeyword}における${mainKeyword || topic}のポイント`,
-                    content: `${firstSubKeyword}の観点から${mainKeyword || topic}について詳しく解説します。`
-                });
+                // 中項目パターンの定義（複数のサブキーワードを組み合わせ可能）
+                const sectionPatterns = [
+                    {
+                        titleTemplate: (sub1, sub2, keyword) => sub2 ? 
+                            `${sub1}と${sub2}から学ぶ${keyword || topic}の基本` :
+                            `${sub1}における${keyword || topic}の重要ポイント`,
+                        contentTemplate: (sub1, sub2, keyword) => sub2 ?
+                            `${sub1}と${sub2}の両方の観点から${keyword || topic}について詳しく解説します。` :
+                            `${sub1}の観点から${keyword || topic}について詳しく解説します。`
+                    },
+                    {
+                        titleTemplate: (sub1, sub2, keyword) => sub2 ?
+                            `${sub1}と${sub2}を活用した${keyword || topic}の実践方法` :
+                            `${sub1}で学ぶ${keyword || topic}の実践方法`,
+                        contentTemplate: (sub1, sub2, keyword) => sub2 ?
+                            `${sub1}と${sub2}を組み合わせて${keyword || topic}を実践する具体的な方法をご紹介します。` :
+                            `${sub1}を通じて${keyword || topic}を実践する具体的な方法をご紹介します。`
+                    },
+                    {
+                        titleTemplate: (sub1, sub2, keyword) => sub2 ?
+                            `${sub1}×${sub2}で実現する${keyword || topic}の応用例` :
+                            `${sub1}を活用した${keyword || topic}の応用例`,
+                        contentTemplate: (sub1, sub2, keyword) => sub2 ?
+                            `${sub1}と${sub2}を組み合わせた${keyword || topic}の応用例や成功事例をご紹介します。` :
+                            `${sub1}を活用した${keyword || topic}の応用例や事例をご紹介します。`
+                    }
+                ];
 
-                // 2つ目のサブキーワードがある場合
-                if (subKeywords.length > 1) {
-                    const secondSubKeyword = subKeywords[1];
+                // 最大3つの中項目を生成
+                const maxSections = Math.min(3, sectionPatterns.length);
+                
+                for (let i = 0; i < maxSections; i++) {
+                    const pattern = sectionPatterns[i];
+                    const firstSub = subKeywords[i] || subKeywords[0]; // 基本は順番に、足りない場合は最初のものを再利用
+                    const secondSub = subKeywords.length > 1 && i < subKeywords.length - 1 ? 
+                        subKeywords[i + 1] : 
+                        (subKeywords.length > 2 ? subKeywords[(i + 1) % subKeywords.length] : null);
+                    
                     sections.push({
-                        title: `${secondSubKeyword}で学ぶ${mainKeyword || topic}の実践方法`,
-                        content: `${secondSubKeyword}を通じて${mainKeyword || topic}を実践する具体的な方法をご紹介します。`
-                    });
-                }
-
-                // 3つ目のサブキーワードがある場合
-                if (subKeywords.length > 2) {
-                    const thirdSubKeyword = subKeywords[2];
-                    sections.push({
-                        title: `${thirdSubKeyword}を活用した${mainKeyword || topic}の応用例`,
-                        content: `${thirdSubKeyword}を活用した${mainKeyword || topic}の応用例や事例をご紹介します。`
+                        title: pattern.titleTemplate(firstSub, secondSub, mainKeyword),
+                        content: pattern.contentTemplate(firstSub, secondSub, mainKeyword)
                     });
                 }
             } else {
-                // サブキーワードがない場合のデフォルトセクション
+                // サブキーワードがない場合のデフォルトセクション（最大3つ）
                 sections.push({
                     title: experience ? '私の経験から学ぶポイント' : '具体例・事例',
                     content: experience || '実際の例や事例を紹介'
@@ -470,10 +489,22 @@
                     title: `${mainKeyword || topic}を効果的に活用する方法`,
                     content: '効果的に進めるためのポイントやコツをご紹介します。'
                 });
+
+                sections.push({
+                    title: `${mainKeyword || topic}の実践と応用`,
+                    content: '実際の現場での活用例や応用方法について解説します。'
+                });
             }
 
-            // 参考記事がある場合の追加セクション
-            if (referenceContent && referenceContent.length > 100) {
+            // 参考記事がある場合は、既存のセクションの1つと置き換える（中項目は最大3つ維持）
+            if (referenceContent && referenceContent.length > 100 && sections.length >= 3) {
+                // 最後のセクションを参考記事セクションに置き換え
+                sections[sections.length - 1] = {
+                    title: `${mainKeyword || topic}について参考記事から学ぶポイント`,
+                    content: '参考記事の重要なポイントを分析し、読者に役立つ情報を抽出します。'
+                };
+            } else if (referenceContent && referenceContent.length > 100 && sections.length < 3) {
+                // セクションが3つ未満の場合は追加
                 sections.push({
                     title: `${mainKeyword || topic}について参考記事から学ぶポイント`,
                     content: '参考記事の重要なポイントを分析し、読者に役立つ情報を抽出します。'
