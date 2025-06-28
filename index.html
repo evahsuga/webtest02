@@ -145,6 +145,51 @@
             display: none;
         }
 
+        .article-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .article-item {
+            background: white;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #3498db;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .article-item:hover {
+            background: #e8f4f8;
+            transform: translateX(5px);
+        }
+
+        .article-item h4 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .article-item .article-date {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .article-item .article-preview {
+            color: #555;
+            font-size: 0.9rem;
+            margin-top: 8px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -216,11 +261,13 @@
                 <label for="content">記事内容（Markdown形式）</label>
                 <textarea id="content" placeholder="ここに記事を書いてください。Markdown記法が使えます。"></textarea>
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                 <button onclick="saveArticle()">記事を保存</button>
                 <button onclick="previewArticle()">プレビュー</button>
-                <button onclick="loadSavedArticles()">保存済み記事</button>
+                <button onclick="showSavedArticlesList()">保存済み記事一覧</button>
+                <button onclick="loadSavedArticles()" style="background: #27ae60;">記事を読み込み</button>
             </div>
+            <div id="articlesList" class="article-list hidden"></div>
         </div>
     </div>
 
@@ -250,12 +297,15 @@
                 'general': '一般の方'
             };
 
+            // AIによる「はじめに」文章生成
+            const introText = generateIntroText(topic, target, purpose, experience);
+
             return {
                 title: `${targetMap[target]}向け：${topic}について`,
                 sections: [
                     {
                         title: 'はじめに',
-                        content: `${topic}について、${targetMap[target]}の方にも分かりやすく解説します。${purpose}`
+                        content: introText
                     },
                     {
                         title: `${topic}とは？`,
@@ -305,7 +355,14 @@
             let template = '';
             for (let i = 1; i < sections.length; i++) {
                 const sectionTitle = sections[i].querySelector('h3').textContent;
-                template += `\n## ${sectionTitle}\n\n（ここに内容を書いてください）\n\n`;
+                const sectionContent = sections[i].querySelector('p').textContent;
+                
+                if (sectionTitle.includes('はじめに')) {
+                    // 「はじめに」セクションには生成された文章を挿入
+                    template += `\n## ${sectionTitle}\n\n${sectionContent}\n\n`;
+                } else {
+                    template += `\n## ${sectionTitle}\n\n（ここに内容を書いてください）\n\n`;
+                }
             }
             document.getElementById('content').value = template;
             
@@ -338,6 +395,91 @@
             alert('記事が保存されました！');
         }
 
+        // AIによる「はじめに」文章生成機能
+        function generateIntroText(topic, target, purpose, experience) {
+            const targetMap = {
+                'beginner': '初心者',
+                'intermediate': '中級者', 
+                'advanced': '上級者',
+                'general': '一般'
+            };
+
+            const templates = {
+                beginner: [
+                    `${topic}に興味を持ち始めた${targetMap[target]}の皆さん、こんにちは。`,
+                    `この記事では、${topic}について基礎から分かりやすく解説していきます。`,
+                    `${purpose}ことを目指して、実践的な内容をお届けします。`,
+                    experience ? `私自身の経験を交えながら、つまずきやすいポイントも含めてご紹介します。` : `具体例を豊富に用いて、理解しやすい形でお伝えします。`
+                ],
+                intermediate: [
+                    `${topic}についてある程度の知識をお持ちの${targetMap[target]}の方へ。`,
+                    `この記事では、さらなるスキルアップを目指し、${purpose}内容を扱います。`,
+                    experience ? `実際の経験から得た知見を共有し、より実践的なアプローチをご提案します。` : `実用的な事例とともに、深い理解へと導きます。`,
+                    `日常の業務や学習に直接活かせる情報をお届けします。`
+                ],
+                advanced: [
+                    `${topic}の専門知識をお持ちの${targetMap[target]}の皆様に向けて。`,
+                    `この記事では、${purpose}高度な内容を扱います。`,
+                    experience ? `豊富な経験に基づく専門的な視点から、深層的な分析をお届けします。` : `最新の動向と実践的な応用例を中心に解説します。`,
+                    `業界のベストプラクティスと革新的なアプローチを探求していきます。`
+                ],
+                general: [
+                    `${topic}について関心をお持ちの皆さん、はじめまして。`,
+                    `この記事では、${topic}の魅力や重要性について、誰にでも理解できる形でお伝えします。`,
+                    `${purpose}ために、身近な例を用いながら分かりやすく解説していきます。`,
+                    experience ? `実体験に基づく具体的なエピソードも交えてご紹介します。` : `日常生活との関連性を重視した内容でお届けします。`
+                ]
+            };
+
+            const selectedTemplate = templates[target] || templates.general;
+            return selectedTemplate.join(' ');
+        }
+
+        // 保存済み記事一覧表示機能
+        function showSavedArticlesList() {
+            const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            const articlesList = document.getElementById('articlesList');
+            
+            if (savedArticles.length === 0) {
+                articlesList.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">保存された記事がありません</p>';
+                articlesList.classList.remove('hidden');
+                return;
+            }
+
+            const listHTML = savedArticles.map((article, index) => {
+                const preview = article.content.replace(/#+\s*/g, '').substring(0, 80) + '...';
+                return `
+                    <div class="article-item" onclick="loadArticleByIndex(${index})">
+                        <h4>${article.title}</h4>
+                        <div class="article-date">${new Date(article.createdAt).toLocaleDateString('ja-JP')}</div>
+                        <div class="article-preview">${preview}</div>
+                    </div>
+                `;
+            }).join('');
+
+            articlesList.innerHTML = `
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">📚 保存済み記事一覧</h3>
+                ${listHTML}
+                <button onclick="hideArticlesList()" style="margin-top: 15px; background: #95a5a6;">一覧を閉じる</button>
+            `;
+            articlesList.classList.remove('hidden');
+        }
+
+        function hideArticlesList() {
+            document.getElementById('articlesList').classList.add('hidden');
+        }
+
+        function loadArticleByIndex(index) {
+            const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
+            if (savedArticles[index]) {
+                const article = savedArticles[index];
+                document.getElementById('title').value = article.title;
+                document.getElementById('content').value = article.content;
+                hideArticlesList();
+                alert(`「${article.title}」を読み込みました`);
+            }
+        }
+
         function loadSavedArticles() {
             const savedArticles = JSON.parse(localStorage.getItem('blogArticles') || '[]');
             if (savedArticles.length === 0) {
@@ -345,8 +487,8 @@
                 return;
             }
 
-            const articleList = savedArticles.map(article => 
-                `${article.title} (${new Date(article.createdAt).toLocaleDateString()})`
+            const articleList = savedArticles.map((article, index) => 
+                `${index + 1}. ${article.title} (${new Date(article.createdAt).toLocaleDateString('ja-JP')})`
             ).join('\n');
             
             const selection = prompt(`保存済み記事:\n${articleList}\n\n読み込みたい記事の番号を入力してください (1-${savedArticles.length})`);
@@ -355,6 +497,7 @@
                 const selectedArticle = savedArticles[selection - 1];
                 document.getElementById('title').value = selectedArticle.title;
                 document.getElementById('content').value = selectedArticle.content;
+                alert(`「${selectedArticle.title}」を読み込みました`);
             }
         }
 
