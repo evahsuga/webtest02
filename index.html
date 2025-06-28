@@ -389,50 +389,98 @@
             };
         }
 
-        // 参考記事を考慮した記事構成生成
+        // 参考記事を考慮した記事構成生成（SEO最適化）
         function generateSectionsWithReference(topic, purpose, experience, referenceContent, keywords = '', subKeywords = '') {
+            // キーワードとサブキーワードを配列に変換
+            const mainKeyword = keywords.trim();
+            const subKeywordArray = subKeywords ? subKeywords.split(',').map(k => k.trim()).filter(k => k) : [];
+            
             const baseSections = [
                 {
                     title: 'はじめに',
                     content: generateIntroText(topic, 'general', purpose, experience, referenceContent)
-                },
-                {
-                    title: `${topic}とは？`,
-                    content: referenceContent ? 
-                        `${topic}の基本的な概念について、参考記事の内容も踏まえて詳しく解説します。` :
-                        '基本的な概念や定義を説明'
                 }
             ];
 
-            // 参考記事がある場合の追加セクション
-            if (referenceContent && referenceContent.length > 100) {
-                baseSections.push({
-                    title: '参考記事から学ぶポイント',
-                    content: '参考記事の重要なポイントを分析し、読者に役立つ情報を抽出します。'
-                });
-            }
+            // SEO最適化された中項目を生成
+            const seoSections = generateSEOOptimizedSections(topic, mainKeyword, subKeywordArray, purpose, experience, referenceContent);
+            baseSections.push(...seoSections);
 
-            // 経験セクション
+            // まとめセクション（メインキーワードを含む）
+            const summaryTitle = mainKeyword ? 
+                `${mainKeyword}に関するまとめ` : 
+                'まとめ';
             baseSections.push({
-                title: experience ? '私の経験から' : '具体例・事例',
-                content: experience || '実際の例や事例を紹介'
-            });
-
-            // ポイント・コツセクション
-            baseSections.push({
-                title: 'ポイント・コツ',
-                content: referenceContent ? 
-                    '参考記事の内容と合わせて、効果的に進めるためのポイントをご紹介します。' :
-                    '効果的に進めるためのポイント'
-            });
-
-            // まとめセクション
-            baseSections.push({
-                title: 'まとめ',
+                title: summaryTitle,
                 content: '記事の要点をまとめ、読者への次のアクションを提案'
             });
 
             return baseSections;
+        }
+
+        // SEO最適化された中項目生成
+        function generateSEOOptimizedSections(topic, mainKeyword, subKeywords, purpose, experience, referenceContent) {
+            const sections = [];
+            
+            // 2. 基本概念セクション（メインキーワード含む）
+            const basicTitle = mainKeyword ? 
+                `${mainKeyword}とは？基本的な概念を解説` : 
+                `${topic}とは？`;
+            sections.push({
+                title: basicTitle,
+                content: referenceContent ? 
+                    `${topic}の基本的な概念について、参考記事の内容も踏まえて詳しく解説します。` :
+                    '基本的な概念や定義を説明'
+            });
+
+            // 3. サブキーワードを活用したセクション生成
+            if (subKeywords.length > 0) {
+                // 最初のサブキーワードを使用
+                const firstSubKeyword = subKeywords[0];
+                sections.push({
+                    title: `${firstSubKeyword}における${mainKeyword || topic}のポイント`,
+                    content: `${firstSubKeyword}の観点から${mainKeyword || topic}について詳しく解説します。`
+                });
+
+                // 2つ目のサブキーワードがある場合
+                if (subKeywords.length > 1) {
+                    const secondSubKeyword = subKeywords[1];
+                    sections.push({
+                        title: `${secondSubKeyword}で学ぶ${mainKeyword || topic}の実践方法`,
+                        content: `${secondSubKeyword}を通じて${mainKeyword || topic}を実践する具体的な方法をご紹介します。`
+                    });
+                }
+
+                // 3つ目のサブキーワードがある場合
+                if (subKeywords.length > 2) {
+                    const thirdSubKeyword = subKeywords[2];
+                    sections.push({
+                        title: `${thirdSubKeyword}を活用した${mainKeyword || topic}の応用例`,
+                        content: `${thirdSubKeyword}を活用した${mainKeyword || topic}の応用例や事例をご紹介します。`
+                    });
+                }
+            } else {
+                // サブキーワードがない場合のデフォルトセクション
+                sections.push({
+                    title: experience ? '私の経験から学ぶポイント' : '具体例・事例',
+                    content: experience || '実際の例や事例を紹介'
+                });
+
+                sections.push({
+                    title: `${mainKeyword || topic}を効果的に活用する方法`,
+                    content: '効果的に進めるためのポイントやコツをご紹介します。'
+                });
+            }
+
+            // 参考記事がある場合の追加セクション
+            if (referenceContent && referenceContent.length > 100) {
+                sections.push({
+                    title: `${mainKeyword || topic}について参考記事から学ぶポイント`,
+                    content: '参考記事の重要なポイントを分析し、読者に役立つ情報を抽出します。'
+                });
+            }
+
+            return sections;
         }
 
         function displayOutline(outline) {
