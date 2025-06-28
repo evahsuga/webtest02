@@ -853,14 +853,16 @@
                         template += `## ${sectionTitle}\n\n${sectionContent}\n\n`;
                     } else if (sectionTitle.includes('私の経験から') && experience) {
                         // 経験セクションにはヒアリング内容をヒントとして追加
-                        template += `## ${sectionTitle}\n\n<!-- ヒント: ${experience} -->\n（上記のヒントを参考に、具体的な経験談を書いてください）\n\n`;
+                        const experienceDraft = generateExperienceDraft(topic, experience, keywords);
+                        template += `## ${sectionTitle}\n\n<!-- ヒント: ${experience} -->\n${experienceDraft}\n\n（上記の文章を参考に、より具体的な経験談を書いてください）\n\n`;
                     } else if (sectionTitle.includes('参考記事から学ぶポイント')) {
                         // 参考記事専用セクション
                         let refHints = `<!-- 参考記事の要約を基に重要なポイントを抽出 -->\n`;
                         if (window.currentReferenceContent) {
                             refHints += `<!-- 参考記事内容: ${window.currentReferenceContent.substring(0, 300)}... -->\n`;
                         }
-                        template += `## ${sectionTitle}\n\n${refHints}（参考記事から学んだ重要なポイントを整理し、読者に分かりやすく解説してください）\n\n`;
+                        const referenceDraft = generateReferenceDraft(topic, window.currentReferenceContent, keywords);
+                        template += `## ${sectionTitle}\n\n${refHints}${referenceDraft}\n\n（上記の文章を参考に、より詳細で具体的な内容に書き換えてください）\n\n`;
                     } else if (sectionTitle.includes('とは？') || sectionTitle.includes('について')) {
                         // 基本説明セクションにはヒアリング内容をヒントとして追加
                         let hints = `<!-- ヒント: ${purpose} -->\n`;
@@ -876,14 +878,16 @@
                                 hints += `<!-- 参考記事のキーポイント: ${window.currentReferenceContent.substring(0, 150)}... -->\n`;
                             }
                         }
-                        template += `## ${sectionTitle}\n\n${hints}（${topic}について、一般の方向けに分かりやすく説明してください。キーワードを適切に使用してください）\n\n`;
+                        const basicDraft = generateBasicExplanationDraft(topic, keywords, subKeywords, purpose);
+                        template += `## ${sectionTitle}\n\n${hints}${basicDraft}\n\n（上記の文章を参考に、より詳細で具体的な内容に書き換えてください）\n\n`;
                     } else if (sectionTitle.includes('まとめ')) {
                         // まとめセクションには記事の目的を反映
                         let summaryHints = `<!-- ヒント: 記事の目的 - ${purpose} -->\n`;
                         if (window.currentReferenceContent) {
                             summaryHints += `<!-- 参考記事の結論も踏まえてまとめる -->\n`;
                         }
-                        template += `## ${sectionTitle}\n\n${summaryHints}（記事の要点をまとめ、読者への次のアクションを提案してください）\n\n`;
+                        const summaryDraft = generateSummaryDraft(topic, purpose, keywords);
+                        template += `## ${sectionTitle}\n\n${summaryHints}${summaryDraft}\n\n（上記の文章を参考に、より詳細で具体的な内容に書き換えてください）\n\n`;
                     } else {
                         // その他のセクションにもキーワード情報と参考URLがあれば追加
                         let hints = '';
@@ -902,7 +906,10 @@
                                 hints += `<!-- 参考情報: ${window.currentReferenceContent.substring(0, 100)}... -->\n`;
                             }
                         }
-                        template += `## ${sectionTitle}\n\n${hints}（ここに内容を書いてください。適切にキーワードを含めてください）\n\n`;
+                        
+                        // AI生成のたたき台文章を追加（200文字程度）
+                        const draftContent = generateSectionDraft(sectionTitle, topic, keywords, subKeywords, purpose, window.currentReferenceContent);
+                        template += `## ${sectionTitle}\n\n${hints}${draftContent}\n\n（上記の文章を参考に、より詳細で具体的な内容に書き換えてください）\n\n`;
                     }
                 });
             }
@@ -959,6 +966,76 @@
             }
 
             return baseTemplate.join(' ');
+        }
+
+        // AI生成：中見出しセクションのたたき台文章生成（200文字程度）
+        function generateSectionDraft(sectionTitle, topic, keywords, subKeywords, purpose, referenceContent) {
+            const templates = {
+                method: [
+                    `${topic}を効果的に活用するためには、まず基本的な理解から始めることが重要です。`,
+                    `実際の手順としては、段階的なアプローチを取ることで、確実な成果を得ることができます。`,
+                    `具体的な方法について、実践的な観点から詳しく解説していきます。`
+                ],
+                point: [
+                    `${topic}において最も重要なポイントは、基本的な概念をしっかりと理解することです。`,
+                    `多くの人が見落としがちな要素として、継続的な取り組みの重要性が挙げられます。`,
+                    `成功事例から学ぶことで、より効果的なアプローチが可能になります。`
+                ],
+                application: [
+                    `${topic}の応用例として、様々な場面での活用方法を考えることができます。`,
+                    `実際の現場では、理論だけでなく実践的なスキルが求められます。`,
+                    `具体的な応用事例を通じて、より深い理解を目指していきましょう。`
+                ],
+                default: [
+                    `${topic}について考える際には、多角的な視点から捉えることが大切です。`,
+                    `基本的な知識を身につけることで、応用的な活用も可能になります。`,
+                    `実践を通じて得られる経験が、より深い理解につながります。`
+                ]
+            };
+
+            let selectedTemplate;
+            if (sectionTitle.includes('方法') || sectionTitle.includes('やり方')) {
+                selectedTemplate = templates.method;
+            } else if (sectionTitle.includes('ポイント') || sectionTitle.includes('重要')) {
+                selectedTemplate = templates.point;
+            } else if (sectionTitle.includes('応用') || sectionTitle.includes('事例')) {
+                selectedTemplate = templates.application;
+            } else {
+                selectedTemplate = templates.default;
+            }
+
+            let draft = selectedTemplate.join(' ');
+            
+            // キーワード統合
+            if (keywords) {
+                draft = draft.replace(new RegExp(`${topic}`, 'g'), `${keywords}`);
+            }
+
+            return draft;
+        }
+
+        // AI生成：基本説明セクションのたたき台文章生成
+        function generateBasicExplanationDraft(topic, keywords, subKeywords, purpose) {
+            const keywordToUse = keywords || topic;
+            return `${keywordToUse}とは、${purpose}のための重要な概念です。一般的に、${keywordToUse}は日常生活の様々な場面で活用されており、多くの人にとって身近な存在となっています。基本的な特徴として、理解しやすく実践的であることが挙げられます。この概念を正しく理解することで、より効果的に活用することが可能になります。`;
+        }
+
+        // AI生成：経験談セクションのたたき台文章生成
+        function generateExperienceDraft(topic, experience, keywords) {
+            const keywordToUse = keywords || topic;
+            return `私自身の経験を振り返ると、${keywordToUse}との出会いは非常に印象深いものでした。最初は分からないことが多く戸惑いましたが、実際に取り組んでみることで徐々に理解が深まりました。特に印象的だったのは、理論と実践のギャップを感じた瞬間です。実体験を通じて学んだことは、書籍や情報だけでは得られない貴重な学びとなりました。`;
+        }
+
+        // AI生成：参考記事セクションのたたき台文章生成
+        function generateReferenceDraft(topic, referenceContent, keywords) {
+            const keywordToUse = keywords || topic;
+            return `参考記事の内容を分析すると、${keywordToUse}に関する重要なポイントがいくつか浮かび上がってきます。特に注目すべき点として、実践的なアプローチの重要性が強調されています。また、継続的な取り組みの必要性についても言及されており、一度きりの取り組みではなく長期的な視点が重要であることが分かります。これらの知見を踏まえて、実際の活用方法を考えていきましょう。`;
+        }
+
+        // AI生成：まとめセクションのたたき台文章生成
+        function generateSummaryDraft(topic, purpose, keywords) {
+            const keywordToUse = keywords || topic;
+            return `今回の記事では、${keywordToUse}について詳しく解説してきました。${purpose}という目的において、基本的な理解から実践的な活用方法まで、幅広い内容をカバーしました。重要なのは、知識を得るだけでなく実際に行動に移すことです。まずは小さな一歩から始めて、徐々に経験を積み重ねていくことをお勧めします。皆さんの取り組みが成功につながることを願っています。`;
         }
 
         // 保存済み記事一覧表示機能

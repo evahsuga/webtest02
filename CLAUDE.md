@@ -6,16 +6,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Japanese blog creation assistant web application (`ブログ作成支援アプリ`) that helps users generate SEO-optimized blog articles through an interactive process. The application is built as a single-page HTML application with embedded CSS and JavaScript.
 
-## Development Setup
+## Development Commands
 
 Since this is a static HTML application, no build process or package installation is required:
 
 ```bash
-# Open the application directly in a browser
-open index.html
-# or use a local server (recommended for development)
+# Development server (recommended)
 python -m http.server 8000
 # then visit http://localhost:8000
+
+# Alternative: open directly in browser
+open index.html
+
+# No linting or testing commands - single file architecture
 ```
 
 ## Architecture
@@ -35,23 +38,33 @@ The application follows a single-file architecture pattern with distinct functio
 
 3. **Article Editor Section** (`#editorCard`) - Markdown-based editor with template generation
 
-### Key JavaScript Functions
+### Critical JavaScript Functions
 
 - `generateOutline()` - Main orchestration function that processes user input and generates article structure
-- `generateSectionsWithReference()` - SEO-optimized section generation using keywords
+- `showHeadingEditor()` - Displays heading editing interface with drag-and-drop functionality  
 - `generateSEOOptimizedSections()` - Creates exactly 3 middle sections using main keyword + sub-keywords combinations
-- `fetchReferenceContent()` - Attempts to fetch and analyze reference articles
+- `fetchReferenceContent()` - Attempts to fetch and analyze reference articles via WebFetch API
 - `startWriting()` - Generates Markdown template with embedded hints and guidance
 - `saveArticle()` / `loadArticleByIndex()` - Local storage management for drafts
+
+### State Management Pattern
+
+The application uses global variables and DOM manipulation:
+- `window.currentReferenceContent` - Stores fetched reference article content
+- `window.currentHeadings` - Manages heading editor state
+- Three main UI cards (`#topicCard`, `#outlineCard`, `#editorCard`) controlled via display states
 
 ### Data Flow
 
 1. User fills interview form → `generateOutline()` called
 2. Reference URL fetched (if provided) → stored in `window.currentReferenceContent`
 3. SEO-optimized outline generated using keywords → displayed in outline section
-4. User clicks "この構成で記事を書く" → `startWriting()` generates Markdown template
-5. Template includes HTML comments with hints, keywords, and reference content
-6. User writes article → can save to localStorage or preview
+4. **Critical Flow**: User clicks "見出しを編集する" → `showHeadingEditor()` → heading modification
+5. User clicks "この見出しで記事を作成" → `startWriting()` generates Markdown template
+6. Template includes HTML comments with hints, keywords, and reference content
+7. User writes article → can save to localStorage or preview
+
+**Important**: The heading editing step (step 4) is mandatory for proper user workflow - this was a recent critical bug fix.
 
 ### SEO Optimization Features
 
@@ -75,7 +88,16 @@ The application is entirely in Japanese and targets Japanese blog writers. All g
 
 When making changes:
 - Maintain the single-file architecture unless adding significant complexity
-- Preserve the SEO optimization logic in section generation
-- Keep the 3-section middle structure for optimal article flow
+- Preserve the SEO optimization logic in section generation - exactly 3 middle sections (##2, ##3, ##4)
+- **Critical**: Ensure heading editor functionality works properly - common issues include:
+  - Button visibility problems (multiple CSS display properties required)
+  - Event handler attachment (use both onclick attributes and addEventListener)
+  - Proper state management for `window.currentHeadings`
 - Ensure localStorage functionality remains intact for draft management
-- Test the full workflow: interview → outline → template → editing → saving
+- Test the complete workflow: interview → outline → heading editing → template → writing → saving
+
+### Common Development Issues
+
+- **Heading Editor Bugs**: The "見出しを編集する" button requires strengthened CSS display properties and dual event handling
+- **WebFetch Integration**: Reference article fetching may fail silently - always check `window.currentReferenceContent`
+- **SEO Section Generation**: Must maintain exactly 3 middle sections for optimal Japanese blog structure
