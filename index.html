@@ -229,6 +229,14 @@
                     <label for="experience">関連する経験・知識</label>
                     <textarea id="experience" placeholder="この話題に関するあなたの経験や専門知識があれば教えてください"></textarea>
                 </div>
+                <div class="form-group" style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; border: 2px solid #3498db;">
+                    <label for="keywords" style="color: #2c3e50; font-weight: bold;">🎯 メインキーワード</label>
+                    <input type="text" id="keywords" placeholder="記事のメインキーワードを入力してください（例：プログラミング学習）" style="border: 2px solid #3498db;">
+                </div>
+                <div class="form-group" style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; border: 2px solid #3498db;">
+                    <label for="subKeywords" style="color: #2c3e50; font-weight: bold;">🔗 サブキーワード</label>
+                    <input type="text" id="subKeywords" placeholder="関連キーワードをカンマ区切りで入力してください（例：初心者, 学習方法, 効率的）" style="border: 2px solid #3498db;">
+                </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button onclick="generateOutline()">構成を提案してもらう</button>
                     <button onclick="showSavedArticlesList()" style="background: #27ae60;">📚 保存済み記事一覧</button>
@@ -276,6 +284,8 @@
             const purpose = document.getElementById('purpose').value;
             const experience = document.getElementById('experience').value;
             const referenceUrl = document.getElementById('referenceUrl').value;
+            const keywords = document.getElementById('keywords').value;
+            const subKeywords = document.getElementById('subKeywords').value;
 
             if (!topic || !purpose) {
                 alert('話題・テーマと記事の目的を入力してください');
@@ -306,7 +316,7 @@
             }
 
             // シンプルな構成生成ロジック（一般向けに固定）
-            const outline = generateBlogOutline(topic, 'general', purpose, experience, referenceContent);
+            const outline = generateBlogOutline(topic, 'general', purpose, experience, referenceContent, keywords, subKeywords);
             displayOutline(outline);
         }
 
@@ -360,7 +370,7 @@
             });
         }
 
-        function generateBlogOutline(topic, target, purpose, experience, referenceContent = '') {
+        function generateBlogOutline(topic, target, purpose, experience, referenceContent = '', keywords = '', subKeywords = '') {
             // 常に一般向けに固定
             const targetText = '一般の方';
 
@@ -368,17 +378,19 @@
             const introText = generateIntroText(topic, 'general', purpose, experience, referenceContent);
 
             // 参考記事がある場合は、より詳細な構成を生成
-            const sections = generateSectionsWithReference(topic, purpose, experience, referenceContent);
+            const sections = generateSectionsWithReference(topic, purpose, experience, referenceContent, keywords, subKeywords);
 
             return {
                 title: `${targetText}向け：${topic}について`,
                 referenceContent: referenceContent,
+                keywords: keywords,
+                subKeywords: subKeywords,
                 sections: sections
             };
         }
 
         // 参考記事を考慮した記事構成生成
-        function generateSectionsWithReference(topic, purpose, experience, referenceContent) {
+        function generateSectionsWithReference(topic, purpose, experience, referenceContent, keywords = '', subKeywords = '') {
             const baseSections = [
                 {
                     title: 'はじめに',
@@ -451,6 +463,8 @@
             const purpose = document.getElementById('purpose').value;
             const experience = document.getElementById('experience').value;
             const referenceUrl = document.getElementById('referenceUrl').value;
+            const keywords = document.getElementById('keywords').value;
+            const subKeywords = document.getElementById('subKeywords').value;
             
             // 構成を基にした記事テンプレートを生成
             const sections = document.querySelectorAll('.outline-item');
@@ -463,6 +477,12 @@
             template += `<!-- 記事の目的: ${purpose} -->\n`;
             if (experience) {
                 template += `<!-- 関連する経験・知識: ${experience} -->\n`;
+            }
+            if (keywords) {
+                template += `<!-- メインキーワード: ${keywords} -->\n`;
+            }
+            if (subKeywords) {
+                template += `<!-- サブキーワード: ${subKeywords} -->\n`;
             }
             if (referenceUrl) {
                 template += `<!-- 参考記事URL: ${referenceUrl} -->\n`;
@@ -494,13 +514,19 @@
                 } else if (sectionTitle.includes('とは？') || sectionTitle.includes('について')) {
                     // 基本説明セクションにはヒアリング内容をヒントとして追加
                     let hints = `<!-- ヒント: ${purpose} -->\n`;
+                    if (keywords) {
+                        hints += `<!-- メインキーワード: ${keywords} -->\n`;
+                    }
+                    if (subKeywords) {
+                        hints += `<!-- サブキーワード: ${subKeywords} -->\n`;
+                    }
                     if (referenceUrl) {
                         hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
                         if (window.currentReferenceContent) {
                             hints += `<!-- 参考記事のキーポイント: ${window.currentReferenceContent.substring(0, 150)}... -->\n`;
                         }
                     }
-                    template += `## ${sectionTitle}\n\n${hints}（${topic}について、一般の方向けに分かりやすく説明してください）\n\n`;
+                    template += `## ${sectionTitle}\n\n${hints}（${topic}について、一般の方向けに分かりやすく説明してください。キーワードを適切に使用してください）\n\n`;
                 } else if (sectionTitle.includes('まとめ')) {
                     // まとめセクションには記事の目的を反映
                     let summaryHints = `<!-- ヒント: 記事の目的 - ${purpose} -->\n`;
@@ -509,15 +535,24 @@
                     }
                     template += `## ${sectionTitle}\n\n${summaryHints}（記事の要点をまとめ、読者への次のアクションを提案してください）\n\n`;
                 } else {
-                    // その他のセクションにも参考URLがあれば追加
+                    // その他のセクションにもキーワード情報と参考URLがあれば追加
                     let hints = '';
+                    if (keywords || subKeywords) {
+                        hints += `<!-- キーワード活用のヒント -->\n`;
+                        if (keywords) {
+                            hints += `<!-- メインキーワード: ${keywords} -->\n`;
+                        }
+                        if (subKeywords) {
+                            hints += `<!-- サブキーワード: ${subKeywords} -->\n`;
+                        }
+                    }
                     if (referenceUrl) {
-                        hints = `<!-- 参考記事: ${referenceUrl} -->\n`;
+                        hints += `<!-- 参考記事: ${referenceUrl} -->\n`;
                         if (window.currentReferenceContent) {
                             hints += `<!-- 参考情報: ${window.currentReferenceContent.substring(0, 100)}... -->\n`;
                         }
                     }
-                    template += `## ${sectionTitle}\n\n${hints}（ここに内容を書いてください）\n\n`;
+                    template += `## ${sectionTitle}\n\n${hints}（ここに内容を書いてください。適切にキーワードを含めてください）\n\n`;
                 }
             }
             
