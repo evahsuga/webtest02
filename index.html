@@ -518,10 +518,20 @@
                     '基本的な概念や定義を説明'
             });
 
-            // 3. サブキーワードを活用した中項目生成（最大3つ）
+            // 3. 経験・知識を分析したSEO最適化中項目生成（最大3つ）
+            let enhancedSections = [];
+            
+            if (experience) {
+                // 経験・知識の内容からキーワードを抽出してSEO見出しを生成
+                const extractedKeywords = extractKeywordsFromExperience(experience);
+                console.log('経験・知識から抽出されたキーワード:', extractedKeywords);
+                enhancedSections = generateExperienceBasedSEOHeadings(topic, mainKeyword, subKeywords, experience);
+                console.log('経験ベースの見出しパターン数:', enhancedSections.length);
+            }
+            
             if (subKeywords.length > 0) {
-                // 中項目パターンの定義（複数のサブキーワードを組み合わせ可能）
-                const sectionPatterns = [
+                // 基本のサブキーワード活用パターンと経験ベースのパターンを組み合わせ
+                const baseSectionPatterns = [
                     {
                         titleTemplate: (sub1, sub2, keyword) => sub2 ? 
                             `${sub1}と${sub2}から学ぶ${keyword || topic}の基本` :
@@ -547,6 +557,9 @@
                             `${sub1}を活用した${keyword || topic}の応用例や事例をご紹介します。`
                     }
                 ];
+                
+                const sectionPatterns = enhancedSections.length > 0 ? 
+                    [...enhancedSections, ...baseSectionPatterns] : baseSectionPatterns;
 
                 // 最大3つの中項目を生成
                 const maxSections = Math.min(3, sectionPatterns.length);
@@ -980,6 +993,106 @@
             }
 
             return baseTemplate.join(' ');
+        }
+
+        // 経験・知識を分析してSEO最適化された見出しを生成
+        function generateExperienceBasedSEOHeadings(topic, mainKeyword, subKeywords, experience) {
+            const keywordToUse = mainKeyword || topic;
+            const experienceKeywords = extractKeywordsFromExperience(experience);
+            const seoHeadings = [];
+
+            // 経験から抽出したキーワードとメインキーワードを組み合わせたSEO見出しパターン
+            experienceKeywords.forEach((expKeyword, index) => {
+                if (index < 2) { // 最大2つの経験ベース見出しを生成
+                    const patterns = [
+                        {
+                            titleTemplate: (exp, main) => `${exp}で学んだ${main}の重要なポイント`,
+                            contentTemplate: (exp, main) => `実際の${exp}を通じて学んだ${main}の重要なポイントをご紹介します。`
+                        },
+                        {
+                            titleTemplate: (exp, main) => `${exp}から見える${main}の実践的活用法`,
+                            contentTemplate: (exp, main) => `${exp}の経験を基に、${main}を実践的に活用する方法を解説します。`
+                        },
+                        {
+                            titleTemplate: (exp, main) => `${exp}×${main}で実現する成功の秘訣`,
+                            contentTemplate: (exp, main) => `${exp}と${main}を組み合わせることで得られる成功のポイントをお伝えします。`
+                        }
+                    ];
+
+                    const selectedPattern = patterns[index % patterns.length];
+                    seoHeadings.push({
+                        titleTemplate: (sub1, sub2, keyword) => selectedPattern.titleTemplate(expKeyword, keyword || keywordToUse),
+                        contentTemplate: (sub1, sub2, keyword) => selectedPattern.contentTemplate(expKeyword, keyword || keywordToUse)
+                    });
+                }
+            });
+
+            // サブキーワードと経験キーワードの組み合わせ
+            if (subKeywords.length > 0 && experienceKeywords.length > 0) {
+                const combinedPattern = {
+                    titleTemplate: (sub1, sub2, keyword) => {
+                        const expKey = experienceKeywords[0];
+                        return sub1 ? `${expKey}と${sub1}で理解する${keyword || keywordToUse}の本質` : 
+                                     `${expKey}で学ぶ${keyword || keywordToUse}の基礎`;
+                    },
+                    contentTemplate: (sub1, sub2, keyword) => {
+                        const expKey = experienceKeywords[0];
+                        return sub1 ? `${expKey}と${sub1}の両方の視点から${keyword || keywordToUse}の本質を探ります。` :
+                                     `${expKey}の経験を通じて${keyword || keywordToUse}の基礎を学びます。`;
+                    }
+                };
+                seoHeadings.push(combinedPattern);
+            }
+
+            return seoHeadings;
+        }
+
+        // 経験・知識の文章からキーワードを抽出
+        function extractKeywordsFromExperience(experience) {
+            if (!experience) return [];
+
+            // 日本語の重要キーワード抽出パターン
+            const keywordPatterns = [
+                /(\w+)の経験/g,
+                /(\w+)で学んだ/g,
+                /(\w+)を通じて/g,
+                /(\w+)に関わって/g,
+                /(\w+)の開発/g,
+                /(\w+)の運用/g,
+                /(\w+)の管理/g,
+                /(\w+)プロジェクト/g,
+                /(\w+)システム/g,
+                /(\w+)チーム/g,
+                /(\w+)業務/g,
+                /(\w+)分野/g,
+                /(\w+)領域/g,
+                /(\w+)技術/g,
+                /(\w+)手法/g,
+                /(\w+)ツール/g,
+                /(\w+)環境/g,
+                /(\w+)プラットフォーム/g
+            ];
+
+            const extractedKeywords = new Set();
+            
+            keywordPatterns.forEach(pattern => {
+                let match;
+                while ((match = pattern.exec(experience)) !== null) {
+                    const keyword = match[1];
+                    if (keyword.length >= 2 && keyword.length <= 10) {
+                        extractedKeywords.add(keyword);
+                    }
+                }
+            });
+
+            // よく使われる一般的な単語を除外
+            const commonWords = ['これ', 'その', 'この', 'あの', '自分', '今回', '最初', '最後', '全体', '部分', '方法', '場合'];
+            const filteredKeywords = Array.from(extractedKeywords).filter(keyword => 
+                !commonWords.includes(keyword) && keyword.length >= 2
+            );
+
+            // 最大3つまでに制限
+            return filteredKeywords.slice(0, 3);
         }
 
         // AI生成：中見出しセクションのたたき台文章生成（200文字程度）
