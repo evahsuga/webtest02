@@ -579,21 +579,50 @@
                     });
                 }
             } else {
-                // サブキーワードがない場合のデフォルトセクション（最大3つ）
-                sections.push({
-                    title: experience ? '私の経験から学ぶポイント' : '具体例・事例',
-                    content: experience || '実際の例や事例を紹介'
-                });
+                // サブキーワードがない場合 - 経験ベースの見出しを優先、不足分はデフォルトで補完
+                if (enhancedSections.length > 0) {
+                    // 経験ベースの見出しがある場合は、それらを使用
+                    const maxSections = Math.min(3, enhancedSections.length);
+                    for (let i = 0; i < maxSections; i++) {
+                        const pattern = enhancedSections[i];
+                        sections.push({
+                            title: pattern.titleTemplate('', '', mainKeyword),
+                            content: pattern.contentTemplate('', '', mainKeyword)
+                        });
+                    }
+                    
+                    // 不足分をデフォルトで補完
+                    if (sections.length < 3) {
+                        const remainingCount = 3 - sections.length;
+                        const defaultTitles = [
+                            `${mainKeyword || topic}を効果的に活用する方法`,
+                            `${mainKeyword || topic}の実践と応用`
+                        ];
+                        
+                        for (let i = 0; i < Math.min(remainingCount, defaultTitles.length); i++) {
+                            sections.push({
+                                title: defaultTitles[i],
+                                content: '効果的に進めるためのポイントやコツをご紹介します。'
+                            });
+                        }
+                    }
+                } else {
+                    // 経験ベースの見出しがない場合のデフォルトセクション（最大3つ）
+                    sections.push({
+                        title: experience ? '私の経験から学ぶポイント' : '具体例・事例',
+                        content: experience || '実際の例や事例を紹介'
+                    });
 
-                sections.push({
-                    title: `${mainKeyword || topic}を効果的に活用する方法`,
-                    content: '効果的に進めるためのポイントやコツをご紹介します。'
-                });
+                    sections.push({
+                        title: `${mainKeyword || topic}を効果的に活用する方法`,
+                        content: '効果的に進めるためのポイントやコツをご紹介します。'
+                    });
 
-                sections.push({
-                    title: `${mainKeyword || topic}の実践と応用`,
-                    content: '実際の現場での活用例や応用方法について解説します。'
-                });
+                    sections.push({
+                        title: `${mainKeyword || topic}の実践と応用`,
+                        content: '実際の現場での活用例や応用方法について解説します。'
+                    });
+                }
             }
 
             // 参考記事がある場合は、既存のセクションの1つと置き換える（中項目は最大3つ維持）
@@ -611,6 +640,7 @@
                 });
             }
 
+            console.log('最終的に生成されたセクション:', sections);
             return sections;
         }
 
@@ -1005,15 +1035,17 @@
             const seoHeadings = [];
 
             // 1. 経験・知識内の##見出し文を優先的に採用
+            console.log('採用する経験見出し数:', experienceHeadings.length);
             experienceHeadings.forEach((heading, index) => {
                 if (index < 3) { // 最大3つの見出しを直接採用
+                    console.log(`見出し ${index + 1} を採用: "${heading}"`);
                     seoHeadings.push({
                         titleTemplate: (sub1, sub2, keyword) => {
                             // 見出し文にキーワードが含まれていない場合は追加
-                            if (keyword && !heading.includes(keyword)) {
-                                return `${heading}（${keyword}活用編）`;
-                            }
-                            return heading;
+                            const finalTitle = (keyword && !heading.includes(keyword)) ? 
+                                `${heading}（${keyword}活用編）` : heading;
+                            console.log(`最終見出し生成: "${finalTitle}"`);
+                            return finalTitle;
                         },
                         contentTemplate: (sub1, sub2, keyword) => `経験に基づく具体的な内容：${heading}について詳しく解説します。`
                     });
@@ -1076,14 +1108,20 @@
         function extractHeadingsFromExperience(experience) {
             if (!experience) return [];
             
+            console.log('経験・知識の元データ:', experience);
+            
             const lines = experience.split('\n');
             const headings = [];
             
-            lines.forEach(line => {
+            lines.forEach((line, index) => {
                 const trimmedLine = line.trim();
-                if (trimmedLine.startsWith('##')) {
+                console.log(`行 ${index + 1}: "${line}" -> トリム後: "${trimmedLine}"`);
+                
+                // ##で始まる行を検出（より厳密にチェック）
+                if (trimmedLine.startsWith('##') && !trimmedLine.startsWith('###')) {
                     // ##を除去してクリーンな見出しテキストを取得
                     const headingText = trimmedLine.replace(/^##\s*/, '').trim();
+                    console.log(`見出し検出: "${headingText}"`);
                     if (headingText.length > 0) {
                         headings.push(headingText);
                     }
